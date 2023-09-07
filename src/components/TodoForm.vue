@@ -1,0 +1,224 @@
+<template>
+  <div v-if="loading">
+    Loading...
+  </div>
+  <form 
+    v-else
+    @submit.prevent="onSave"
+  >
+    <div class="row">
+        <div class="col-6">
+            <div class="form-group">
+                <label>Subject</label>
+                <input
+                    v-model="todo.subject" 
+                    type="text" 
+                    class="form-control"
+                >
+                <div v-if="subjectError" class="text-red">
+                    {{ subjectError }}
+                </div>
+            </div>
+        </div>
+    
+        <div v-if="editing" class="col-6">
+            <div class="form-group">
+                <label>Status</label>
+                <div>
+                    <button
+                        class="btn"
+                        type="button"
+                        :class="todo.completed ? 'btn-success' : 'btn-danger'"
+                        @click="toggleTodoStatus"
+                    >
+                        {{ todo.completed ? 'Completed' : 'Incomplete' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="form-group">
+                <label>Body</label>
+                <div>
+                    <textarea 
+                        v-model="todo.body"
+                        class="form-control"
+                        id="" 
+                        cols="30" 
+                        rows="10">
+                    </textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button 
+        type="submit"
+        class="btn btn-primary"
+        :disabled="!todoUpdated"
+    >
+        {{ editing ? 'Update' : 'Create' }}
+    </button>
+    <button 
+        class="btn btn-outline-dark ml-2"
+        @click="moveToTodoListPage"
+    >
+        Cancel
+    </button>
+
+  </form>
+
+  <transition name="fade">
+    <Toast
+        v-if="showToast"
+        :message="toastMessage"
+        :type="toastAlertType"
+    />
+  </transition>
+</template>
+
+<script>
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
+import { ref, computed } from 'vue';
+import _ from 'lodash';
+import Toast from '@/components/Toast.vue';
+import { useToast } from '@/composables/toast';
+
+export default {
+    components: {
+        Toast
+    },
+    props: {
+        editing: {
+            type: Boolean,
+            default: false
+        }
+    },
+
+    setup(props) {
+        const route = useRoute();
+        const router = useRouter();
+        const todo = ref({
+            subject: '',
+            completed: false,
+            body: ''
+        });
+        const subjectError = ref('');
+        const originalTodo = ref(null);
+        const loading = ref(false);
+
+        const {
+            toastMessage,
+            toastAlertType,
+            showToast,
+            triggerToast
+        } = useToast()
+
+        const todoId = route.params.id;
+
+        const getTodo = async () => {
+            loading.value = true;
+            try {
+                const res = await axios.get(`http://localhost:3000/todos/${todoId}`);
+                todo.value = { ...res.data }; // 값을 변경해도 todo의 value만 변경되고 originalTodo는 그대로
+                originalTodo.value = { ...res.data };
+                loading.value = false;
+            } catch (error) {
+                loading.value = false;
+                console.log(error);
+                triggerToast('Something went wrong!', 'danger');
+            }
+            
+        }
+
+        const todoUpdated = computed(() => {
+            return !_.isEqual(todo.value, originalTodo.value);// property 순서 상관 없이 값을 비교하기 위해 lodash 라이브러리 사용
+        })
+
+        const toggleTodoStatus = () => {
+            todo.value.completed = !todo.value.completed
+        }
+
+        const moveToTodoListPage = () => {
+            router.push({
+                name: 'Todos'
+            })
+        }
+
+        if (props.editing) {
+            getTodo(); // editing === true일 때만 todo 정보들을 가져옴
+        }
+        
+
+        const onSave = async () => {
+            subjectError.value = '';
+            if (!todo.value.subject) {
+                subjectError.value = 'Subject is required!'
+                return;
+            }
+
+            try {
+                let res;
+                const data = {
+                    subject: todo.value.subject,
+                    completed: todo.value.completed,
+                    body: todo.value.body
+            }
+            if (props.editing) {
+                res = await axios.put(`http://localhost:3000/todos/${todoId}`, data);
+                originalTodo.value = { ...res.data };
+            } else {
+                res = await axios.post('http://localhost:3000/todos', data);
+                todo.value.subject = '';
+                todo.value.body = '';
+            }
+            
+            const message = 'successfully ' + (props.editing ? 'Updated!' : 'Created!')
+            triggerToast(message);
+            } catch (error) {
+                console.log(error);
+                triggerToast('Something went wrong!', 'danger');
+            }
+        }
+
+        return {
+            todo,
+            loading,
+            toggleTodoStatus,
+            moveToTodoListPage,
+            onSave,
+            todoUpdated,
+            showToast,
+            toastMessage,
+            toastAlertType,
+            subjectError
+        };
+    }
+}
+</script>
+
+<style scoped>
+    .text-red {
+        color: red;
+    }
+
+    .fade-enter-active,
+    .fade-leave-active {
+        transition: all 0.5s ease;
+    }
+
+    .fade-enter-from,
+    .fade-leave-to {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    .fade-enter-to,
+    .fade-leave-from {
+        opacity: 1;
+        transform: translateY(0px);
+    }
+
+</style>
