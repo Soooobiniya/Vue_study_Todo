@@ -30,30 +30,12 @@
         @delete-todo="deleteTodo"
       />
       <hr />
-      <nav aria-label="Page navigation example">
-        <ul class="pagination">
-          <li
-            v-if="currentPage !== 1" 
-            class="page-item"
-          >
-            <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage - 1)">Previous</a>
-          </li>
-          <li 
-            v-for="num in numOfPages" 
-            :key="num"
-            class="page-item"
-            :class="currentPage === num ? 'active' : ''"
-          >
-            <a style="cursor: pointer" class="page-link" @click="getTodos(num)">{{ num }}</a>
-          </li>
-          <li 
-            v-if="currentPage !== numOfPages" 
-            class="page-item"
-          >
-            <a style="cursor: pointer" class="page-link" @click="getTodos(currentPage + 1)">Next</a>
-          </li>
-        </ul>
-      </nav>
+      <Pagination
+        v-if="todos.length"
+        :numOfPages="numOfPages"
+        :currentPage="currentPage"
+        @click="getTodos"
+      />
     </div>
   </div>
 </template>
@@ -64,10 +46,12 @@ import TodoList from '@/components/TodoList.vue';
 import axios from '@/axios';
 import { useToast } from '@/composables/toast';
 import { useRouter } from 'vue-router';
+import Pagination from '@/components/Pagination.vue';
 
 export default {
   components: {
     TodoList,
+    Pagination
   },
   setup() {
     const router = useRouter();
