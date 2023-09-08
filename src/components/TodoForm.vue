@@ -74,27 +74,18 @@
 
   </form>
 
-  <transition name="fade">
-    <Toast
-        v-if="showToast"
-        :message="toastMessage"
-        :type="toastAlertType"
-    />
-  </transition>
 </template>
 
 <script>
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+import axios from '@/axios';
 import { ref, computed, onUpdated } from 'vue';
 import _ from 'lodash';
-import Toast from '@/components/Toast.vue';
 import { useToast } from '@/composables/toast';
 import Input from './Input.vue';
 
 export default {
     components: {
-        Toast,
         Input
     },
     props: {
@@ -131,7 +122,7 @@ export default {
         const getTodo = async () => {
             loading.value = true;
             try {
-                const res = await axios.get(`http://localhost:3000/todos/${todoId}`);
+                const res = await axios.get(`todos/${todoId}`);
                 todo.value = { ...res.data }; // 값을 변경해도 todo의 value만 변경되고 originalTodo는 그대로
                 originalTodo.value = { ...res.data };
                 loading.value = false;
@@ -177,16 +168,22 @@ export default {
                     body: todo.value.body
             }
             if (props.editing) {
-                res = await axios.put(`http://localhost:3000/todos/${todoId}`, data);
+                res = await axios.put(`todos/${todoId}`, data);
                 originalTodo.value = { ...res.data };
             } else {
-                res = await axios.post('http://localhost:3000/todos', data);
+                res = await axios.post('todos', data);
                 todo.value.subject = '';
                 todo.value.body = '';
             }
             
             const message = 'successfully ' + (props.editing ? 'Updated!' : 'Created!')
             triggerToast(message);
+
+            if (!props.editing) {
+                router.push({
+                    name: 'Todos'
+                })
+            }
             } catch (error) {
                 console.log(error);
                 triggerToast('Something went wrong!', 'danger');

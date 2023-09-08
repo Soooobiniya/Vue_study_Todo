@@ -14,11 +14,20 @@
   <div class="container">
     <router-view />
   </div>
+
+  <Toast />
 </template>
 
 <script>
-export default {};
+import Toast from '@/components/Toast.vue';
+
+export default {
+  components: {
+    Toast
+  },
+};
 </script>
 
-<style>
+<style scoped>
+
 </style>
